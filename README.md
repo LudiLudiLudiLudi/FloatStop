@@ -35,7 +35,7 @@ Screenshots coming soon.
 ## Build from source
 
 ```sh
-git clone https://github.com/YOUR_USERNAME/FloatStop.git
+git clone https://github.com/LudiLudiLudiLudi/FloatStop.git
 cd FloatStop
 open FloatStop.xcodeproj
 ```
