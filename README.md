@@ -24,7 +24,7 @@ AppKit. No Electron. No third-party dependencies.
 
 ## Screenshots
 
-Screenshots coming soon.
+![FloatStop floating stopwatch](docs/screenshot.png)
 
 ## Requirements
 
