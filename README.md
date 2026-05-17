@@ -8,6 +8,9 @@ FloatStop is a small native macOS stopwatch that floats above normal windows
 and stays accessible from the menu bar. It is built with Swift, SwiftUI, and
 AppKit. No Electron. No third-party dependencies.
 
+FloatStop was built as a small vibe-coding experiment: one focused utility,
+one clear purpose, no extra platform ambitions.
+
 ## Features
 
 - Floating always-on-top stopwatch
