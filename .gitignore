@@ -1,0 +1,23 @@
+# macOS
+.DS_Store
+
+# Xcode build output
+build/
+dist/
+DerivedData/
+
+# Xcode user state
+*.xcuserstate
+xcuserdata/
+*.xcworkspace/xcuserdata/
+
+# Xcode misc
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+*.xcarchive
+
+# Logs
+*.log
