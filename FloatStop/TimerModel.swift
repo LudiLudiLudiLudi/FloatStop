@@ -1,13 +1,22 @@
 import Foundation
 import Combine
 
-final class StopwatchEngine: ObservableObject {
+final class TimerModel: ObservableObject, Identifiable {
+    let id: UUID
+    @Published var title: String
+    @Published var targetDuration: TimeInterval?
     @Published var elapsed: TimeInterval = 0
     @Published var isRunning: Bool = false
 
     private var startDate: Date?
     private var accumulated: TimeInterval = 0
     private var timer: Timer?
+
+    init(id: UUID = UUID(), title: String = "", targetDuration: TimeInterval? = nil) {
+        self.id = id
+        self.title = title
+        self.targetDuration = targetDuration
+    }
 
     func startPause() {
         if isRunning {
@@ -24,6 +33,8 @@ final class StopwatchEngine: ObservableObject {
         accumulated = 0
         elapsed = 0
         isRunning = false
+        title = ""
+        targetDuration = nil
     }
 
     private func resume() {

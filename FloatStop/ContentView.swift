@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ContentView: View {
-    @ObservedObject var engine: StopwatchEngine
+    @ObservedObject var engine: TimerModel
 
     var body: some View {
         VStack(spacing: 8) {

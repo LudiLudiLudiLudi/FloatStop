@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    private let engine = StopwatchEngine()
+    private let engine = TimerModel()
     private var panel: FloatingPanel?
     private var menuBarController: MenuBarController?
 

@@ -7,7 +7,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     private let statusItem: NSStatusItem
     private let menu: NSMenu
     private let panel: NSPanel
-    private let engine: StopwatchEngine
+    private let engine: TimerModel
 
     private let showHideItem = NSMenuItem(title: "Hide FloatStop", action: #selector(toggleShowHide), keyEquivalent: "")
     private let startPauseItem = NSMenuItem(title: "Start", action: #selector(startPause), keyEquivalent: "")
@@ -15,7 +15,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     private let hideDockIconItem = NSMenuItem(title: "Hide Dock Icon", action: #selector(toggleHideDockIcon), keyEquivalent: "")
     private let launchAtLoginItem = NSMenuItem(title: "Launch at Login", action: #selector(toggleLaunchAtLogin), keyEquivalent: "")
 
-    init(panel: NSPanel, engine: StopwatchEngine) {
+    init(panel: NSPanel, engine: TimerModel) {
         self.panel = panel
         self.engine = engine
         self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
