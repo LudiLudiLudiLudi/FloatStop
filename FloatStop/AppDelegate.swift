@@ -2,29 +2,17 @@ import AppKit
 import SwiftUI
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    private let engine = TimerModel()
-    private var panel: FloatingPanel?
+    private var timerWindow: TimerWindowController?
     private var menuBarController: MenuBarController?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         applyDockIconPreference()
 
-        let contentView = ContentView(engine: engine)
-        let hosting = NSHostingView(rootView: contentView)
+        let controller = TimerWindowController()
+        controller.showWindow()
 
-        let panel = FloatingPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 280, height: 120),
-            styleMask: [],
-            backing: .buffered,
-            defer: false
-        )
-        panel.contentView = hosting
-        panel.isReleasedWhenClosed = false
-        panel.center()
-        panel.makeKeyAndOrderFront(nil as Any?)
-
-        self.panel = panel
-        self.menuBarController = MenuBarController(panel: panel, engine: engine)
+        self.timerWindow = controller
+        self.menuBarController = MenuBarController(panel: controller.panel, engine: controller.model)
 
         NSApp.activate(ignoringOtherApps: true)
     }

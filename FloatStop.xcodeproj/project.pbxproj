@@ -14,6 +14,7 @@
 		C00000000000000000000005 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000005 /* ContentView.swift */; };
 		C00000000000000000000006 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000006 /* Assets.xcassets */; };
 		C00000000000000000000007 /* MenuBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000007 /* MenuBarController.swift */; };
+		C00000000000000000000008 /* TimerWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000008 /* TimerWindowController.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -25,6 +26,7 @@
 		B00000000000000000000005 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		B00000000000000000000006 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		B00000000000000000000007 /* MenuBarController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarController.swift; sourceTree = "<group>"; };
+		B00000000000000000000008 /* TimerWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerWindowController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -63,6 +65,7 @@
 				B00000000000000000000004 /* TimerModel.swift */,
 				B00000000000000000000005 /* ContentView.swift */,
 				B00000000000000000000007 /* MenuBarController.swift */,
+				B00000000000000000000008 /* TimerWindowController.swift */,
 				B00000000000000000000006 /* Assets.xcassets */,
 			);
 			path = FloatStop;
@@ -143,6 +146,7 @@
 				C00000000000000000000004 /* TimerModel.swift in Sources */,
 				C00000000000000000000005 /* ContentView.swift in Sources */,
 				C00000000000000000000007 /* MenuBarController.swift in Sources */,
+				C00000000000000000000008 /* TimerWindowController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
