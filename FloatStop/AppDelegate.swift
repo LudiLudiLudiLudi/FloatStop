@@ -11,7 +11,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let controller = store.createDefaultTimer()
         controller.showWindow()
 
-        self.menuBarController = MenuBarController(panel: controller.panel, engine: controller.model)
+        self.menuBarController = MenuBarController(panel: controller.panel, engine: controller.model, store: store)
 
         NSApp.activate(ignoringOtherApps: true)
     }

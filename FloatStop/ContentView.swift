@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ContentView: View {
     @ObservedObject var engine: TimerModel
+    var onDuplicate: (() -> Void)?
 
     var body: some View {
         VStack(spacing: 8) {
@@ -24,6 +25,16 @@ struct ContentView: View {
                     engine.reset()
                 }
                 .controlSize(.small)
+
+                if let onDuplicate {
+                    Menu {
+                        Button("Duplicate Timer") { onDuplicate() }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                    }
+                    .menuStyle(.borderlessButton)
+                    .fixedSize()
+                }
             }
             .font(.system(size: 12))
         }

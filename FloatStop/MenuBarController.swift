@@ -8,16 +8,19 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     private let menu: NSMenu
     private let panel: NSPanel
     private let engine: TimerModel
+    private let store: TimerStore
 
+    private let newTimerItem = NSMenuItem(title: "New Timer", action: #selector(newTimer), keyEquivalent: "")
     private let showHideItem = NSMenuItem(title: "Hide FloatStop", action: #selector(toggleShowHide), keyEquivalent: "")
     private let startPauseItem = NSMenuItem(title: "Start", action: #selector(startPause), keyEquivalent: "")
     private let resetItem = NSMenuItem(title: "Reset", action: #selector(reset), keyEquivalent: "")
     private let hideDockIconItem = NSMenuItem(title: "Hide Dock Icon", action: #selector(toggleHideDockIcon), keyEquivalent: "")
     private let launchAtLoginItem = NSMenuItem(title: "Launch at Login", action: #selector(toggleLaunchAtLogin), keyEquivalent: "")
 
-    init(panel: NSPanel, engine: TimerModel) {
+    init(panel: NSPanel, engine: TimerModel, store: TimerStore) {
         self.panel = panel
         self.engine = engine
+        self.store = store
         self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         self.menu = NSMenu()
         super.init()
@@ -37,9 +40,11 @@ final class MenuBarController: NSObject, NSMenuDelegate {
 
         menu.delegate = self
 
-        [showHideItem, startPauseItem, resetItem, hideDockIconItem, launchAtLoginItem].forEach {
+        [newTimerItem, showHideItem, startPauseItem, resetItem, hideDockIconItem, launchAtLoginItem].forEach {
             $0.target = self
         }
+        menu.addItem(newTimerItem)
+        menu.addItem(.separator())
         menu.addItem(showHideItem)
         menu.addItem(.separator())
         menu.addItem(startPauseItem)
@@ -65,6 +70,10 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         startPauseItem.title = engine.isRunning ? "Pause" : "Start"
         hideDockIconItem.state = UserDefaults.standard.bool(forKey: hideDockIconKey) ? .on : .off
         launchAtLoginItem.state = (SMAppService.mainApp.status == .enabled) ? .on : .off
+    }
+
+    @objc private func newTimer() {
+        store.newTimer()
     }
 
     @objc private func toggleShowHide() {
