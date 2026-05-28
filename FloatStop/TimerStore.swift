@@ -57,6 +57,19 @@ final class TimerStore: ObservableObject {
         for c in controllers { c.panel.orderOut(nil) }
     }
 
+    /// Removes all timer windows. Running timers are stopped, panels are
+    /// ordered out, and controllers drop their last strong reference.
+    /// After this call `controllers` is empty; the user can create fresh
+    /// timers via New Timer.
+    func closeAll() {
+        for c in controllers {
+            c.panel.orderOut(nil)
+            // TimerModel.deinit invalidates its Timer when the controller
+            // is dropped from the array.
+        }
+        controllers.removeAll()
+    }
+
     // MARK: - private
 
     private func bindDuplicate(_ controller: TimerWindowController) {

@@ -62,4 +62,8 @@ final class TimerModel: ObservableObject, Identifiable {
         guard let start = startDate else { return }
         elapsed = accumulated + Date().timeIntervalSince(start)
     }
+
+    deinit {
+        timer?.invalidate()
+    }
 }

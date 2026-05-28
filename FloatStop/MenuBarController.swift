@@ -11,6 +11,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     private let newTimerItem = NSMenuItem(title: "New Timer", action: #selector(newTimer), keyEquivalent: "")
     private let showAllItem = NSMenuItem(title: "Show All Timers", action: #selector(showAll), keyEquivalent: "")
     private let hideAllItem = NSMenuItem(title: "Hide All Timers", action: #selector(hideAll), keyEquivalent: "")
+    private let closeAllItem = NSMenuItem(title: "Close All Timers", action: #selector(closeAll), keyEquivalent: "")
     private let hideDockIconItem = NSMenuItem(title: "Hide Dock Icon", action: #selector(toggleHideDockIcon), keyEquivalent: "")
     private let launchAtLoginItem = NSMenuItem(title: "Launch at Login", action: #selector(toggleLaunchAtLogin), keyEquivalent: "")
 
@@ -35,12 +36,13 @@ final class MenuBarController: NSObject, NSMenuDelegate {
 
         menu.delegate = self
 
-        [newTimerItem, showAllItem, hideAllItem, hideDockIconItem, launchAtLoginItem].forEach {
+        [newTimerItem, showAllItem, hideAllItem, closeAllItem, hideDockIconItem, launchAtLoginItem].forEach {
             $0.target = self
         }
         menu.addItem(newTimerItem)
         menu.addItem(showAllItem)
         menu.addItem(hideAllItem)
+        menu.addItem(closeAllItem)
         menu.addItem(.separator())
         menu.addItem(hideDockIconItem)
         menu.addItem(launchAtLoginItem)
@@ -73,6 +75,10 @@ final class MenuBarController: NSObject, NSMenuDelegate {
 
     @objc private func hideAll() {
         store.hideAll()
+    }
+
+    @objc private func closeAll() {
+        store.closeAll()
     }
 
     @objc private func toggleHideDockIcon() {
