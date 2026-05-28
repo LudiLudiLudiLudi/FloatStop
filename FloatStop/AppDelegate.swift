@@ -2,16 +2,15 @@ import AppKit
 import SwiftUI
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    private var timerWindow: TimerWindowController?
+    private let store = TimerStore()
     private var menuBarController: MenuBarController?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         applyDockIconPreference()
 
-        let controller = TimerWindowController()
+        let controller = store.createDefaultTimer()
         controller.showWindow()
 
-        self.timerWindow = controller
         self.menuBarController = MenuBarController(panel: controller.panel, engine: controller.model)
 
         NSApp.activate(ignoringOtherApps: true)
