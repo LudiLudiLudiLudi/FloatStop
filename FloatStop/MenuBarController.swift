@@ -6,20 +6,15 @@ private let hideDockIconKey = "FloatStop.hideDockIcon"
 final class MenuBarController: NSObject, NSMenuDelegate {
     private let statusItem: NSStatusItem
     private let menu: NSMenu
-    private let panel: NSPanel
-    private let engine: TimerModel
     private let store: TimerStore
 
     private let newTimerItem = NSMenuItem(title: "New Timer", action: #selector(newTimer), keyEquivalent: "")
-    private let showHideItem = NSMenuItem(title: "Hide FloatStop", action: #selector(toggleShowHide), keyEquivalent: "")
-    private let startPauseItem = NSMenuItem(title: "Start", action: #selector(startPause), keyEquivalent: "")
-    private let resetItem = NSMenuItem(title: "Reset", action: #selector(reset), keyEquivalent: "")
+    private let showAllItem = NSMenuItem(title: "Show All Timers", action: #selector(showAll), keyEquivalent: "")
+    private let hideAllItem = NSMenuItem(title: "Hide All Timers", action: #selector(hideAll), keyEquivalent: "")
     private let hideDockIconItem = NSMenuItem(title: "Hide Dock Icon", action: #selector(toggleHideDockIcon), keyEquivalent: "")
     private let launchAtLoginItem = NSMenuItem(title: "Launch at Login", action: #selector(toggleLaunchAtLogin), keyEquivalent: "")
 
-    init(panel: NSPanel, engine: TimerModel, store: TimerStore) {
-        self.panel = panel
-        self.engine = engine
+    init(store: TimerStore) {
         self.store = store
         self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         self.menu = NSMenu()
@@ -40,15 +35,12 @@ final class MenuBarController: NSObject, NSMenuDelegate {
 
         menu.delegate = self
 
-        [newTimerItem, showHideItem, startPauseItem, resetItem, hideDockIconItem, launchAtLoginItem].forEach {
+        [newTimerItem, showAllItem, hideAllItem, hideDockIconItem, launchAtLoginItem].forEach {
             $0.target = self
         }
         menu.addItem(newTimerItem)
-        menu.addItem(.separator())
-        menu.addItem(showHideItem)
-        menu.addItem(.separator())
-        menu.addItem(startPauseItem)
-        menu.addItem(resetItem)
+        menu.addItem(showAllItem)
+        menu.addItem(hideAllItem)
         menu.addItem(.separator())
         menu.addItem(hideDockIconItem)
         menu.addItem(launchAtLoginItem)
@@ -66,8 +58,6 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     }
 
     private func updateMenuItems() {
-        showHideItem.title = panel.isVisible ? "Hide FloatStop" : "Show FloatStop"
-        startPauseItem.title = engine.isRunning ? "Pause" : "Start"
         hideDockIconItem.state = UserDefaults.standard.bool(forKey: hideDockIconKey) ? .on : .off
         launchAtLoginItem.state = (SMAppService.mainApp.status == .enabled) ? .on : .off
     }
@@ -76,24 +66,13 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         store.newTimer()
     }
 
-    @objc private func toggleShowHide() {
-        if panel.isVisible {
-            panel.orderOut(nil)
-        } else {
-            panel.makeKeyAndOrderFront(nil)
-            NSApp.activate(ignoringOtherApps: true)
-        }
-        updateMenuItems()
+    @objc private func showAll() {
+        store.showAll()
+        NSApp.activate(ignoringOtherApps: true)
     }
 
-    @objc private func startPause() {
-        engine.startPause()
-        updateMenuItems()
-    }
-
-    @objc private func reset() {
-        engine.reset()
-        updateMenuItems()
+    @objc private func hideAll() {
+        store.hideAll()
     }
 
     @objc private func toggleHideDockIcon() {
