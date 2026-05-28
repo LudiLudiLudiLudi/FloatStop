@@ -24,7 +24,7 @@ final class FloatingPanel: NSPanel {
         self.isOpaque = false
         self.backgroundColor = NSColor.windowBackgroundColor.withAlphaComponent(0.85)
         self.hasShadow = true
-        self.minSize = NSSize(width: 200, height: 90)
+        self.minSize = NSSize(width: 220, height: 130)
         self.isReleasedWhenClosed = false
 
         if let close = self.standardWindowButton(.closeButton) {

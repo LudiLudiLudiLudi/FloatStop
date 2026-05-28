@@ -10,7 +10,7 @@ final class TimerWindowController {
     var onDuplicate: (() -> Void)?
 
     init(model: TimerModel = TimerModel(),
-         contentRect: NSRect = NSRect(x: 0, y: 0, width: 280, height: 120),
+         contentRect: NSRect = NSRect(x: 0, y: 0, width: 280, height: 160),
          centered: Bool = true) {
         self.model = model
         self.panel = FloatingPanel(
