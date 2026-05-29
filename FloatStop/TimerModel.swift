@@ -1,5 +1,24 @@
 import Foundation
 import Combine
+import SwiftUI
+
+/// Per-timer digit color presets. Affects only the main elapsed text.
+enum TimerColor: String, CaseIterable, Codable {
+    case yellow, blue, green, orange, purple, white
+
+    var swiftUIColor: Color {
+        switch self {
+        case .yellow: return .yellow
+        case .blue:   return .blue
+        case .green:  return .green
+        case .orange: return .orange
+        case .purple: return .purple
+        case .white:  return .white
+        }
+    }
+
+    var displayName: String { rawValue.capitalized }
+}
 
 final class TimerModel: ObservableObject, Identifiable {
     let id: UUID
@@ -14,6 +33,13 @@ final class TimerModel: ObservableObject, Identifiable {
 
     @Published var elapsed: TimeInterval = 0
     @Published var isRunning: Bool = false
+
+    /// Per-window appearance — independent of task content. Survives Reset.
+    @Published var titleColor: TimerColor = .yellow
+    @Published var digitColor: TimerColor = .yellow
+    @Published var opacity: Double = 1.0
+    @Published var titleFontSize: Double = 18
+    @Published var digitFontSize: Double = 56
 
     private var startDate: Date?
     private var accumulated: TimeInterval = 0
@@ -57,6 +83,9 @@ final class TimerModel: ObservableObject, Identifiable {
         }
     }
 
+    /// Reset clears task content only. Per-window appearance (color, opacity,
+    /// titleFontSize, digitFontSize) is preserved — it's window style, not
+    /// task state.
     func reset() {
         timer?.invalidate()
         timer = nil

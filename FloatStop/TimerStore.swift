@@ -30,6 +30,14 @@ final class TimerStore: ObservableObject {
             title: source.model.title,
             targetDuration: source.model.targetDuration
         )
+        // Duplicate carries the source's visual style; the task window itself
+        // (targetStartedAt / targetEndDate) does NOT carry over — the duplicate
+        // is in `ready` state, per Step 5.1.2 spec.
+        copiedModel.titleColor = source.model.titleColor
+        copiedModel.digitColor = source.model.digitColor
+        copiedModel.opacity = source.model.opacity
+        copiedModel.titleFontSize = source.model.titleFontSize
+        copiedModel.digitFontSize = source.model.digitFontSize
         let srcFrame = source.panel.frame
         let offset: CGFloat = 30
         let newFrame = NSRect(

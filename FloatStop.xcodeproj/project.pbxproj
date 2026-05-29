@@ -17,6 +17,7 @@
 		C00000000000000000000008 /* TimerWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000008 /* TimerWindowController.swift */; };
 		C00000000000000000000009 /* TimerStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000009 /* TimerStore.swift */; };
 		C0000000000000000000000A /* TargetEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0000000000000000000000A /* TargetEditorView.swift */; };
+		C0000000000000000000000B /* AppearanceEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0000000000000000000000B /* AppearanceEditorView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -31,6 +32,7 @@
 		B00000000000000000000008 /* TimerWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerWindowController.swift; sourceTree = "<group>"; };
 		B00000000000000000000009 /* TimerStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerStore.swift; sourceTree = "<group>"; };
 		B0000000000000000000000A /* TargetEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TargetEditorView.swift; sourceTree = "<group>"; };
+		B0000000000000000000000B /* AppearanceEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppearanceEditorView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -72,6 +74,7 @@
 				B00000000000000000000008 /* TimerWindowController.swift */,
 				B00000000000000000000009 /* TimerStore.swift */,
 				B0000000000000000000000A /* TargetEditorView.swift */,
+				B0000000000000000000000B /* AppearanceEditorView.swift */,
 				B00000000000000000000006 /* Assets.xcassets */,
 			);
 			path = FloatStop;
@@ -155,6 +158,7 @@
 				C00000000000000000000008 /* TimerWindowController.swift in Sources */,
 				C00000000000000000000009 /* TimerStore.swift in Sources */,
 				C0000000000000000000000A /* TargetEditorView.swift in Sources */,
+				C0000000000000000000000B /* AppearanceEditorView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

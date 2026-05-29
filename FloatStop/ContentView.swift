@@ -1,24 +1,30 @@
 import SwiftUI
 
+private enum ActivePopover: Identifiable {
+    case target
+    case appearance
+    var id: Self { self }
+}
+
 struct ContentView: View {
     @ObservedObject var engine: TimerModel
     var onDuplicate: (() -> Void)?
 
-    @State private var showingTargetEditor = false
+    @State private var activePopover: ActivePopover?
 
     var body: some View {
         VStack(spacing: 6) {
             TextField("Timer", text: $engine.title)
                 .textFieldStyle(.plain)
-                .font(.system(size: 16, weight: .semibold))
+                .font(.system(size: CGFloat(engine.titleFontSize), weight: .semibold))
                 .multilineTextAlignment(.center)
-                .foregroundStyle(.primary)
+                .foregroundStyle(engine.titleColor.swiftUIColor)
                 .frame(maxWidth: .infinity)
 
             Text(formatElapsed(engine.elapsed))
-                .font(.system(size: 56, weight: .semibold, design: .monospaced))
+                .font(.system(size: CGFloat(engine.digitFontSize), weight: .semibold, design: .monospaced))
                 .monospacedDigit()
-                .foregroundStyle(.yellow)
+                .foregroundStyle(engine.digitColor.swiftUIColor)
                 .minimumScaleFactor(0.5)
                 .lineLimit(1)
                 .frame(maxWidth: .infinity)
@@ -48,20 +54,29 @@ struct ContentView: View {
             }
 
             HStack(spacing: 12) {
-                Button(engine.isRunning ? "Pause" : "Start") {
+                Button {
                     engine.startPause()
+                } label: {
+                    Text(engine.isRunning ? "Pause" : "Start")
                 }
-                .controlSize(.small)
+                .buttonStyle(.borderedProminent)
+                .tint(engine.isRunning ? .orange : .blue)
+                .controlSize(.regular)
                 .keyboardShortcut(.defaultAction)
 
                 Button("Reset") {
                     engine.reset()
                 }
-                .controlSize(.small)
+                .buttonStyle(.bordered)
+                .tint(.red)
+                .controlSize(.regular)
 
                 Menu {
-                    Button("Set Target…") { showingTargetEditor = true }
+                    Button("Set Target…") { activePopover = .target }
                         .disabled(engine.isRunning)
+
+                    Button("Appearance…") { activePopover = .appearance }
+
                     if onDuplicate != nil {
                         Button("Duplicate Timer") { onDuplicate?() }
                     }
@@ -70,14 +85,18 @@ struct ContentView: View {
                 }
                 .menuStyle(.borderlessButton)
                 .fixedSize()
-                .popover(isPresented: $showingTargetEditor, arrowEdge: .top) {
-                    TargetEditorView(
-                        currentTarget: engine.targetDuration,
-                        onApply: { engine.setTarget($0) }
-                    )
+                .popover(item: $activePopover, arrowEdge: .bottom) { which in
+                    switch which {
+                    case .target:
+                        TargetEditorView(
+                            currentTarget: engine.targetDuration,
+                            onApply: { engine.setTarget($0) }
+                        )
+                    case .appearance:
+                        AppearanceEditorView(engine: engine)
+                    }
                 }
             }
-            .font(.system(size: 12))
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 8)

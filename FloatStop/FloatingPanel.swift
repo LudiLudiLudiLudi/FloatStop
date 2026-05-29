@@ -22,7 +22,7 @@ final class FloatingPanel: NSPanel {
         self.titleVisibility = .hidden
         self.titlebarAppearsTransparent = true
         self.isOpaque = false
-        self.backgroundColor = NSColor.windowBackgroundColor.withAlphaComponent(0.85)
+        self.backgroundColor = NSColor.windowBackgroundColor
         self.hasShadow = true
         self.minSize = NSSize(width: 220, height: 130)
         self.isReleasedWhenClosed = false
