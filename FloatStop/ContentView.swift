@@ -10,9 +10,9 @@ struct ContentView: View {
         VStack(spacing: 6) {
             TextField("Timer", text: $engine.title)
                 .textFieldStyle(.plain)
-                .font(.system(size: 12))
+                .font(.system(size: 16, weight: .semibold))
                 .multilineTextAlignment(.center)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.primary)
                 .frame(maxWidth: .infinity)
 
             Text(formatElapsed(engine.elapsed))
@@ -23,12 +23,20 @@ struct ContentView: View {
                 .lineLimit(1)
                 .frame(maxWidth: .infinity)
 
-            if engine.targetDuration != nil {
-                Text(targetLine)
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
+            // Allocated task window status. Always rendered for stable layout
+            // (single space + opacity 0 when there's no target). Wall-clock
+            // driven at 1 Hz via TimelineView, so "Window left" continues to
+            // tick even while the active-work stopwatch is paused.
+            //
+            // This is a calculated display from `targetEndDate - now`, not an
+            // autonomous countdown. Pausing the timer does not affect it.
+            TimelineView(.periodic(from: Date(), by: 1.0)) { context in
+                Text(targetLineText(at: context.date))
+                    .font(.system(size: 12))
+                    .foregroundStyle(.primary)
                     .lineLimit(1)
                     .frame(maxWidth: .infinity)
+                    .opacity(engine.targetDuration != nil ? 1 : 0)
             }
 
             HStack(spacing: 12) {
@@ -45,6 +53,7 @@ struct ContentView: View {
 
                 Menu {
                     Button("Set Target…") { showingTargetEditor = true }
+                        .disabled(engine.isRunning)
                     if onDuplicate != nil {
                         Button("Duplicate Timer") { onDuplicate?() }
                     }
@@ -54,7 +63,10 @@ struct ContentView: View {
                 .menuStyle(.borderlessButton)
                 .fixedSize()
                 .popover(isPresented: $showingTargetEditor, arrowEdge: .top) {
-                    TargetEditorView(targetDuration: $engine.targetDuration)
+                    TargetEditorView(
+                        currentTarget: engine.targetDuration,
+                        onApply: { engine.setTarget($0) }
+                    )
                 }
             }
             .font(.system(size: 12))
@@ -64,17 +76,22 @@ struct ContentView: View {
         .frame(minWidth: 220, minHeight: 130)
     }
 
-    // MARK: - formatting
+    // MARK: - secondary line
 
-    private var targetLine: String {
-        guard let target = engine.targetDuration else { return "" }
-        let remaining = target - engine.elapsed
-        if remaining >= 0 {
-            return "Target \(formatMMSS(target)) · \(formatMMSS(remaining)) remaining"
+    private func targetLineText(at now: Date) -> String {
+        guard let duration = engine.targetDuration else { return " " }
+        guard let endDate = engine.targetEndDate else {
+            return "Target \(formatMMSS(duration)) · ready"
+        }
+        let delta = endDate.timeIntervalSince(now)
+        if delta >= 0 {
+            return "Window left \(formatMMSS(delta))"
         } else {
-            return "+\(formatMMSS(-remaining)) overtime"
+            return "+\(formatMMSS(-delta)) overtime"
         }
     }
+
+    // MARK: - formatting
 
     private func formatElapsed(_ t: TimeInterval) -> String {
         let total = max(0, t)

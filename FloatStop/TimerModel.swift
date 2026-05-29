@@ -4,7 +4,14 @@ import Combine
 final class TimerModel: ObservableObject, Identifiable {
     let id: UUID
     @Published var title: String
-    @Published var targetDuration: TimeInterval?
+
+    /// Read-only from outside; mutated only via `setTarget(_:)` so the three
+    /// window fields (`targetDuration`, `targetStartedAt`, `targetEndDate`)
+    /// always move together.
+    @Published private(set) var targetDuration: TimeInterval?
+    @Published private(set) var targetStartedAt: Date?
+    @Published private(set) var targetEndDate: Date?
+
     @Published var elapsed: TimeInterval = 0
     @Published var isRunning: Bool = false
 
@@ -15,7 +22,31 @@ final class TimerModel: ObservableObject, Identifiable {
     init(id: UUID = UUID(), title: String = "", targetDuration: TimeInterval? = nil) {
         self.id = id
         self.title = title
-        self.targetDuration = targetDuration
+        if let d = targetDuration {
+            setTarget(d)
+        }
+    }
+
+    /// Canonical mutation path for the allocated task window.
+    /// - nil duration → clears target, start, end.
+    /// - duration set, window already started → preserves the original
+    ///   `targetStartedAt`, recomputes `targetEndDate` as start + new duration
+    ///   (so editing target mid-session extends/shrinks the existing window).
+    /// - duration set, window not started → `targetEndDate` remains nil; the
+    ///   next Start arms the window.
+    func setTarget(_ duration: TimeInterval?) {
+        guard let duration = duration else {
+            targetDuration = nil
+            targetStartedAt = nil
+            targetEndDate = nil
+            return
+        }
+        targetDuration = duration
+        if let start = targetStartedAt {
+            targetEndDate = start.addingTimeInterval(duration)
+        } else {
+            targetEndDate = nil
+        }
     }
 
     func startPause() {
@@ -35,11 +66,22 @@ final class TimerModel: ObservableObject, Identifiable {
         isRunning = false
         title = ""
         targetDuration = nil
+        targetStartedAt = nil
+        targetEndDate = nil
     }
 
     private func resume() {
         startDate = Date()
         isRunning = true
+        // First Start after a target was set arms the wall-clock task window.
+        // Subsequent Resumes do NOT touch `targetStartedAt` / `targetEndDate`,
+        // because the window is tied to the original allocation, not to the
+        // active-work stopwatch.
+        if let duration = targetDuration, targetStartedAt == nil {
+            let now = Date()
+            targetStartedAt = now
+            targetEndDate = now.addingTimeInterval(duration)
+        }
         let t = Timer(timeInterval: 0.1, repeats: true) { [weak self] _ in
             self?.tick()
         }

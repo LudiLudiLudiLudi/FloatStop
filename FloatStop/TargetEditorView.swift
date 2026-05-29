@@ -1,9 +1,15 @@
 import SwiftUI
 
 /// Small popover for setting (or clearing) a timer's target duration.
-/// Minutes only; per spec §4 — no seconds, no presets, no Pomodoro.
+/// Minutes only — no seconds, no presets, no Pomodoro.
+///
+/// Uses a closure callback (not a Binding) so all target mutations route
+/// through `TimerModel.setTarget(_:)`, which keeps `targetDuration`,
+/// `targetStartedAt`, and `targetEndDate` consistent.
 struct TargetEditorView: View {
-    @Binding var targetDuration: TimeInterval?
+    let currentTarget: TimeInterval?
+    let onApply: (TimeInterval?) -> Void
+
     @State private var minutesText: String = ""
     @Environment(\.dismiss) private var dismiss
 
@@ -23,10 +29,10 @@ struct TargetEditorView: View {
 
             HStack {
                 Button("Clear") {
-                    targetDuration = nil
+                    onApply(nil)
                     dismiss()
                 }
-                .disabled(targetDuration == nil)
+                .disabled(currentTarget == nil)
 
                 Spacer()
 
@@ -40,7 +46,7 @@ struct TargetEditorView: View {
         .padding(14)
         .frame(width: 240)
         .onAppear {
-            if let t = targetDuration {
+            if let t = currentTarget {
                 minutesText = String(Int(t / 60))
             }
         }
@@ -53,7 +59,7 @@ struct TargetEditorView: View {
 
     private func applyAndDismiss() {
         if let m = parsedMinutes {
-            targetDuration = TimeInterval(m * 60)
+            onApply(TimeInterval(m * 60))
         }
         dismiss()
     }
