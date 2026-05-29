@@ -23,20 +23,28 @@ struct ContentView: View {
                 .lineLimit(1)
                 .frame(maxWidth: .infinity)
 
-            // Allocated task window status. Always rendered for stable layout
-            // (single space + opacity 0 when there's no target). Wall-clock
-            // driven at 1 Hz via TimelineView, so "Window left" continues to
-            // tick even while the active-work stopwatch is paused.
+            // Allocated task window status. The TimelineView's 1 Hz refresh is
+            // only paid for when a target exists. With no target, render a
+            // static reserved line of the same height so the rest of the
+            // layout doesn't move.
             //
-            // This is a calculated display from `targetEndDate - now`, not an
-            // autonomous countdown. Pausing the timer does not affect it.
-            TimelineView(.periodic(from: Date(), by: 1.0)) { context in
-                Text(targetLineText(at: context.date))
+            // While active, the line reads from `targetEndDate - now` (wall-
+            // clock driven). It keeps ticking even while the active-work
+            // stopwatch is paused, because Pause does not stop the task window.
+            // This is a calculated display, not an autonomous countdown.
+            if engine.targetDuration != nil {
+                TimelineView(.periodic(from: Date(), by: 1.0)) { context in
+                    Text(targetLineText(at: context.date))
+                        .font(.system(size: 12))
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                        .frame(maxWidth: .infinity)
+                }
+            } else {
+                Text(" ")
                     .font(.system(size: 12))
-                    .foregroundStyle(.primary)
                     .lineLimit(1)
                     .frame(maxWidth: .infinity)
-                    .opacity(engine.targetDuration != nil ? 1 : 0)
             }
 
             HStack(spacing: 12) {
@@ -80,14 +88,15 @@ struct ContentView: View {
 
     private func targetLineText(at now: Date) -> String {
         guard let duration = engine.targetDuration else { return " " }
+        let windowLabel = "Task window \(formatMMSS(duration))"
         guard let endDate = engine.targetEndDate else {
-            return "Target \(formatMMSS(duration)) · ready"
+            return "\(windowLabel) · ready"
         }
         let delta = endDate.timeIntervalSince(now)
         if delta >= 0 {
-            return "Window left \(formatMMSS(delta))"
+            return "\(windowLabel) · \(formatMMSS(delta)) left"
         } else {
-            return "+\(formatMMSS(-delta)) overtime"
+            return "\(windowLabel) · +\(formatMMSS(-delta)) overtime"
         }
     }
 
