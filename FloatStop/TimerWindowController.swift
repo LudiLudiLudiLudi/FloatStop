@@ -11,8 +11,8 @@ final class TimerWindowController: NSObject, NSWindowDelegate {
     let panel: FloatingPanel
     var onDuplicate: (() -> Void)?
     /// Set by TimerStore. Permanently closes this timer (stops it + removes
-    /// the controller). Invoked by both the in-window "Close Timer" menu item
-    /// and the red window close button.
+    /// the controller). Invoked only after the user confirms in
+    /// `confirmAndClose()` (reached from the red ✕ or the "Close Timer" menu).
     var onClose: (() -> Void)?
 
     private var cancellables: Set<AnyCancellable> = []
@@ -32,7 +32,8 @@ final class TimerWindowController: NSObject, NSWindowDelegate {
         let hosting = NSHostingView(rootView: ContentView(
             engine: model,
             onDuplicate: { [weak self] in self?.onDuplicate?() },
-            onClose: { [weak self] in self?.onClose?() }
+            onHide: { [weak self] in self?.hide() },
+            onRequestClose: { [weak self] in self?.confirmAndClose() }
         ))
         panel.contentView = hosting
         panel.isReleasedWhenClosed = false
@@ -64,12 +65,34 @@ final class TimerWindowController: NSObject, NSWindowDelegate {
         model.setDisplayPaused(!panel.occlusionState.contains(.visible))
     }
 
-    /// Red window close button → real close (terminate this timer), not the
-    /// old orderOut-only "hide". We do the teardown via onClose and return
-    /// false so AppKit doesn't also run its default close path.
+    /// Red window close button = DESTRUCTIVE close, with confirmation. We run
+    /// the teardown ourselves (after the user confirms) and return false so
+    /// AppKit never runs its own close path.
     func windowShouldClose(_ sender: NSWindow) -> Bool {
-        onClose?()
+        confirmAndClose()
         return false
+    }
+
+    /// Non-destructive hide: just order the window out. The timer keeps
+    /// running and the controller stays in the store, so "Show All Timers"
+    /// brings it back.
+    func hide() {
+        panel.orderOut(nil)
+    }
+
+    /// Confirm, then permanently close this timer (stop it + remove it from
+    /// the store via `onClose`). Cancel leaves it running and visible.
+    func confirmAndClose() {
+        let alert = NSAlert()
+        alert.messageText = "Close Timer?"
+        alert.informativeText = "This will stop and remove this timer."
+        alert.alertStyle = .warning
+        let closeButton = alert.addButton(withTitle: "Close Timer") // .alertFirstButtonReturn
+        alert.addButton(withTitle: "Cancel")
+        if #available(macOS 11.0, *) { closeButton.hasDestructiveAction = true }
+        if alert.runModal() == .alertFirstButtonReturn {
+            onClose?()
+        }
     }
 
     func showWindow() {

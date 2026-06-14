@@ -9,9 +9,12 @@ private enum ActivePopover: Identifiable {
 struct ContentView: View {
     @ObservedObject var engine: TimerModel
     var onDuplicate: (() -> Void)?
-    /// Permanently close THIS timer (stop it and remove its window). The red
-    /// window close button does the same — both route here.
-    var onClose: (() -> Void)?
+    /// Hide THIS timer's window (non-destructive). Timer keeps running; the
+    /// window comes back via "Show All Timers".
+    var onHide: (() -> Void)?
+    /// Request a destructive close of THIS timer. Shows a confirmation first
+    /// (same path as the red ✕). On confirm it stops and removes the timer.
+    var onRequestClose: (() -> Void)?
 
     @State private var activePopover: ActivePopover?
 
@@ -84,9 +87,14 @@ struct ContentView: View {
                         Button("Duplicate Timer") { onDuplicate?() }
                     }
 
-                    if onClose != nil {
+                    if onHide != nil || onRequestClose != nil {
                         Divider()
-                        Button("Close Timer", role: .destructive) { onClose?() }
+                    }
+                    if onHide != nil {
+                        Button("Hide Timer") { onHide?() }   // reversible: Show All brings it back
+                    }
+                    if onRequestClose != nil {
+                        Button("Close Timer", role: .destructive) { onRequestClose?() }  // confirms, then removes
                     }
                 } label: {
                     Image(systemName: "ellipsis.circle")
