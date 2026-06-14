@@ -165,6 +165,10 @@ final class TimerModel: ObservableObject, Identifiable {
 
     private func tick() {
         guard let start = startDate else { return }
+        // The display timer is scheduled on RunLoop.main, so this fires on the
+        // main thread. assumeIsolated turns that into a checked assertion for
+        // the @MainActor DebugMetrics counters (opt-in; off by default).
+        MainActor.assumeIsolated { DebugMetrics.recordTick() }
         elapsed = accumulated + Date().timeIntervalSince(start)
     }
 
