@@ -122,11 +122,14 @@ struct ContentView: View {
     // MARK: - formatting
 
     private func formatElapsed(_ t: TimeInterval) -> String {
+        // Whole seconds only. The display refreshes at 1 Hz (see TimerModel),
+        // so showing tenths here would just stutter at 10× the CPU cost. The
+        // underlying elapsed value stays exact — only the shown precision
+        // changed.
         let total = max(0, t)
         let minutes = Int(total) / 60
         let seconds = Int(total) % 60
-        let tenths = Int((total - floor(total)) * 10)
-        return String(format: "%02d:%02d.%d", minutes, seconds, tenths)
+        return String(format: "%02d:%02d", minutes, seconds)
     }
 
     private func formatMMSS(_ t: TimeInterval) -> String {

@@ -45,6 +45,12 @@ final class TimerModel: ObservableObject, Identifiable {
     private var accumulated: TimeInterval = 0
     private var timer: Timer?
 
+    /// When true, the display-refresh timer is suspended (e.g. the window is
+    /// occluded or hidden). The stopwatch keeps running — `elapsed` is
+    /// recomputed from wall-clock `Date()` whenever it next refreshes — so no
+    /// time is lost; we simply stop redrawing what nobody can see.
+    private var displayPaused = false
+
     init(id: UUID = UUID(), title: String = "", targetDuration: TimeInterval? = nil) {
         self.id = id
         self.title = title
@@ -111,11 +117,39 @@ final class TimerModel: ObservableObject, Identifiable {
             targetStartedAt = now
             targetEndDate = now.addingTimeInterval(duration)
         }
-        let t = Timer(timeInterval: 0.1, repeats: true) { [weak self] _ in
+        startDisplayTimer()
+    }
+
+    /// Start (or restart) the 1 Hz display-refresh timer, unless the display is
+    /// currently paused (window occluded/hidden). 1 Hz matches the on-screen
+    /// precision (MM:SS) and is 10× cheaper than the old 0.1 s tick; the
+    /// tolerance lets the OS coalesce the fire for App Nap / energy efficiency.
+    /// Accuracy is unaffected — `tick()` reads the wall clock each fire.
+    private func startDisplayTimer() {
+        timer?.invalidate()
+        guard isRunning, !displayPaused else { return }
+        let t = Timer(timeInterval: 1.0, repeats: true) { [weak self] _ in
             self?.tick()
         }
+        t.tolerance = 0.2
         RunLoop.main.add(t, forMode: .common)
         timer = t
+    }
+
+    /// Suspend or resume display refresh without affecting elapsed time.
+    /// Called by the window controller when the panel becomes occluded/hidden
+    /// or visible again. While paused, no redraw work happens at all.
+    func setDisplayPaused(_ paused: Bool) {
+        guard paused != displayPaused else { return }
+        displayPaused = paused
+        if paused {
+            timer?.invalidate()
+            timer = nil
+        } else {
+            // Becoming visible again: refresh the shown value once, then resume.
+            tick()
+            startDisplayTimer()
+        }
     }
 
     private func pause() {

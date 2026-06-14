@@ -6,7 +6,7 @@ import Combine
 /// `onDuplicate` is set by `TimerStore` so the per-window UI can ask the
 /// store to clone this controller. The controller also mirrors the model's
 /// `opacity` onto `panel.alphaValue` live, so the slider feels responsive.
-final class TimerWindowController {
+final class TimerWindowController: NSObject {
     let model: TimerModel
     let panel: FloatingPanel
     var onDuplicate: (() -> Void)?
@@ -23,6 +23,7 @@ final class TimerWindowController {
             backing: .buffered,
             defer: false
         )
+        super.init()
 
         let hosting = NSHostingView(rootView: ContentView(
             engine: model,
@@ -40,9 +41,28 @@ final class TimerWindowController {
                 panel?.alphaValue = CGFloat(newValue)
             }
             .store(in: &cancellables)
+
+        // Pause display refresh whenever the panel isn't actually visible
+        // (occluded by other windows, or ordered out). A running timer that
+        // nobody can see then costs ~zero CPU; elapsed stays exact and the
+        // shown value is refreshed the moment the panel becomes visible again.
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(occlusionChanged),
+            name: NSWindow.didChangeOcclusionStateNotification,
+            object: panel
+        )
+    }
+
+    @objc private func occlusionChanged() {
+        model.setDisplayPaused(!panel.occlusionState.contains(.visible))
     }
 
     func showWindow() {
         panel.makeKeyAndOrderFront(nil as Any?)
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
     }
 }
