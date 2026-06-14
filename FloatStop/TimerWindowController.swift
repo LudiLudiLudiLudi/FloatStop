@@ -6,10 +6,14 @@ import Combine
 /// `onDuplicate` is set by `TimerStore` so the per-window UI can ask the
 /// store to clone this controller. The controller also mirrors the model's
 /// `opacity` onto `panel.alphaValue` live, so the slider feels responsive.
-final class TimerWindowController: NSObject {
+final class TimerWindowController: NSObject, NSWindowDelegate {
     let model: TimerModel
     let panel: FloatingPanel
     var onDuplicate: (() -> Void)?
+    /// Set by TimerStore. Permanently closes this timer (stops it + removes
+    /// the controller). Invoked by both the in-window "Close Timer" menu item
+    /// and the red window close button.
+    var onClose: (() -> Void)?
 
     private var cancellables: Set<AnyCancellable> = []
 
@@ -27,10 +31,12 @@ final class TimerWindowController: NSObject {
 
         let hosting = NSHostingView(rootView: ContentView(
             engine: model,
-            onDuplicate: { [weak self] in self?.onDuplicate?() }
+            onDuplicate: { [weak self] in self?.onDuplicate?() },
+            onClose: { [weak self] in self?.onClose?() }
         ))
         panel.contentView = hosting
         panel.isReleasedWhenClosed = false
+        panel.delegate = self
         if centered { panel.center() }
 
         // Mirror model.opacity onto the panel's alphaValue. Initial value plus
@@ -56,6 +62,14 @@ final class TimerWindowController: NSObject {
 
     @objc private func occlusionChanged() {
         model.setDisplayPaused(!panel.occlusionState.contains(.visible))
+    }
+
+    /// Red window close button → real close (terminate this timer), not the
+    /// old orderOut-only "hide". We do the teardown via onClose and return
+    /// false so AppKit doesn't also run its default close path.
+    func windowShouldClose(_ sender: NSWindow) -> Bool {
+        onClose?()
+        return false
     }
 
     func showWindow() {

@@ -9,6 +9,9 @@ private enum ActivePopover: Identifiable {
 struct ContentView: View {
     @ObservedObject var engine: TimerModel
     var onDuplicate: (() -> Void)?
+    /// Permanently close THIS timer (stop it and remove its window). The red
+    /// window close button does the same — both route here.
+    var onClose: (() -> Void)?
 
     @State private var activePopover: ActivePopover?
 
@@ -79,6 +82,11 @@ struct ContentView: View {
 
                     if onDuplicate != nil {
                         Button("Duplicate Timer") { onDuplicate?() }
+                    }
+
+                    if onClose != nil {
+                        Divider()
+                        Button("Close Timer", role: .destructive) { onClose?() }
                     }
                 } label: {
                     Image(systemName: "ellipsis.circle")

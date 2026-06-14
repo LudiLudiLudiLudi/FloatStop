@@ -10,6 +10,7 @@ final class TimerStore: ObservableObject {
     func createDefaultTimer() -> TimerWindowController {
         let controller = TimerWindowController()
         bindDuplicate(controller)
+        bindClose(controller)
         controllers.append(controller)
         return controller
     }
@@ -52,9 +53,23 @@ final class TimerStore: ObservableObject {
             centered: false
         )
         bindDuplicate(controller)
+        bindClose(controller)
         controllers.append(controller)
         controller.showWindow()
         return controller
+    }
+
+    /// Permanently close ONE timer: stop its loop immediately, order its panel
+    /// out, and drop the controller so it deallocates. This is the real "close"
+    /// — unlike hideAll(), the timer no longer runs invisibly in the
+    /// background. Removal is deferred to the next run-loop tick so we don't
+    /// deallocate the window mid-event while its close is being processed.
+    func close(_ controller: TimerWindowController) {
+        controller.model.prepareForRemoval()
+        controller.panel.orderOut(nil)
+        DispatchQueue.main.async { [weak self] in
+            self?.controllers.removeAll { $0 === controller }
+        }
     }
 
     func showAll() {
@@ -84,6 +99,13 @@ final class TimerStore: ObservableObject {
         controller.onDuplicate = { [weak self, weak controller] in
             guard let self, let controller else { return }
             self.duplicate(controller)
+        }
+    }
+
+    private func bindClose(_ controller: TimerWindowController) {
+        controller.onClose = { [weak self, weak controller] in
+            guard let self, let controller else { return }
+            self.close(controller)
         }
     }
 }

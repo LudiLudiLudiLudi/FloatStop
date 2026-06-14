@@ -163,6 +163,17 @@ final class TimerModel: ObservableObject, Identifiable {
         elapsed = accumulated
     }
 
+    /// Permanently stop this timer because it's being closed/removed. Unlike
+    /// the display pause (which keeps the stopwatch conceptually running so the
+    /// time stays correct), this terminates the loop for good. Invalidating
+    /// here makes the stop immediate rather than relying on deinit timing.
+    func prepareForRemoval() {
+        timer?.invalidate()
+        timer = nil
+        startDate = nil
+        isRunning = false
+    }
+
     private func tick() {
         guard let start = startDate else { return }
         // The display timer is scheduled on RunLoop.main, so this fires on the
