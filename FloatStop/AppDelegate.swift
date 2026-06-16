@@ -11,6 +11,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         logBuildMarker()
+
+        // Opt-in alarm self-test (off by default). When requested it runs in
+        // isolation and exits the process, so skip normal UI launch.
+        if AlarmSelfTest.runIfRequested() { return }
+
         applyDockIconPreference()
 
         let controller = store.createDefaultTimer()

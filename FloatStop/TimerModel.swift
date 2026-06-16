@@ -1,6 +1,7 @@
 import Foundation
 import Combine
 import SwiftUI
+import AppKit
 
 /// Per-timer digit color presets. Affects only the main elapsed text.
 enum TimerColor: String, CaseIterable, Codable {
@@ -29,7 +30,11 @@ final class TimerModel: ObservableObject, Identifiable {
     /// always move together.
     @Published private(set) var targetDuration: TimeInterval?
     @Published private(set) var targetStartedAt: Date?
-    @Published private(set) var targetEndDate: Date?
+    @Published private(set) var targetEndDate: Date? {
+        // Any change to the armed task-window end (arm / re-arm / clear) starts
+        // a fresh alarm opportunity and (re)schedules the one-shot alarm.
+        didSet { rescheduleTargetAlarm() }
+    }
 
     @Published var elapsed: TimeInterval = 0
     @Published var isRunning: Bool = false
@@ -50,6 +55,20 @@ final class TimerModel: ObservableObject, Identifiable {
     /// recomputed from wall-clock `Date()` whenever it next refreshes — so no
     /// time is lost; we simply stop redrawing what nobody can see.
     private var displayPaused = false
+
+    // MARK: Target-reached alarm
+    //
+    // A single one-shot Timer scheduled for `targetEndDate`. It is NOT driven
+    // by the per-second display refresh, so the alarm fires exactly once at the
+    // target — never repeatedly on each redraw. `targetAlarmFired` is the
+    // single-fire ("alreadyPlayed") guard; it resets whenever the target window
+    // is re-armed, so a new task window can ring again.
+    private var alarmTimer: Timer?
+    private var targetAlarmFired = false
+
+    /// Invoked once when the task-window target is reached. Default rings the
+    /// alarm (at least twice) + Dock attention; overridable for tests.
+    var onTargetReached: () -> Void = { TargetAlarm.shared.fire() }
 
     init(id: UUID = UUID(), title: String = "", targetDuration: TimeInterval? = nil) {
         self.id = id
@@ -152,6 +171,36 @@ final class TimerModel: ObservableObject, Identifiable {
         }
     }
 
+    /// (Re)schedule the one-shot target alarm from the current `targetEndDate`.
+    /// Cancels any pending alarm and clears the single-fire guard first (the
+    /// window changed), then arms a Timer only if the target is in the future.
+    /// A target already in the past (e.g. restored/edited to a past value) does
+    /// NOT auto-fire — that avoids a surprise ring on relaunch/edit.
+    private func rescheduleTargetAlarm() {
+        alarmTimer?.invalidate()
+        alarmTimer = nil
+        targetAlarmFired = false
+
+        guard let end = targetEndDate else { return }
+        let interval = end.timeIntervalSinceNow
+        guard interval > 0 else { return }
+
+        let t = Timer(timeInterval: interval, repeats: false) { [weak self] _ in
+            self?.fireTargetAlarm()
+        }
+        t.tolerance = 0.5
+        RunLoop.main.add(t, forMode: .common)
+        alarmTimer = t
+    }
+
+    /// Fire exactly once per armed target window (guarded by `targetAlarmFired`).
+    private func fireTargetAlarm() {
+        guard !targetAlarmFired else { return }
+        targetAlarmFired = true
+        alarmTimer = nil
+        onTargetReached()
+    }
+
     private func pause() {
         if let start = startDate {
             accumulated += Date().timeIntervalSince(start)
@@ -170,6 +219,8 @@ final class TimerModel: ObservableObject, Identifiable {
     func prepareForRemoval() {
         timer?.invalidate()
         timer = nil
+        alarmTimer?.invalidate()
+        alarmTimer = nil
         startDate = nil
         isRunning = false
     }
@@ -185,5 +236,6 @@ final class TimerModel: ObservableObject, Identifiable {
 
     deinit {
         timer?.invalidate()
+        alarmTimer?.invalidate()
     }
 }
