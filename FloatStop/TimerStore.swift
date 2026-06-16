@@ -39,6 +39,7 @@ final class TimerStore: ObservableObject {
         copiedModel.opacity = source.model.opacity
         copiedModel.titleFontSize = source.model.titleFontSize
         copiedModel.digitFontSize = source.model.digitFontSize
+        copiedModel.alarmSoundName = source.model.alarmSoundName
         let srcFrame = source.panel.frame
         let offset: CGFloat = 30
         let newFrame = NSRect(

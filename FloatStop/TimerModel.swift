@@ -46,6 +46,11 @@ final class TimerModel: ObservableObject, Identifiable {
     @Published var titleFontSize: Double = 18
     @Published var digitFontSize: Double = 56
 
+    /// Per-timer alarm sound (a macOS system-sound name, see `SystemSounds`).
+    /// Used by the default `onTargetReached`. Like the rest of the model it is
+    /// not persisted across launches.
+    @Published var alarmSoundName: String = SystemSounds.defaultName
+
     private var startDate: Date?
     private var accumulated: TimeInterval = 0
     private var timer: Timer?
@@ -72,7 +77,9 @@ final class TimerModel: ObservableObject, Identifiable {
     private var wakeObserver: NSObjectProtocol?
 
     /// Invoked once when the task-window target is reached. Default rings the
-    /// alarm (at least twice) + Dock attention; overridable for tests.
+    /// alarm (at least twice, using this timer's `alarmSoundName`) + Dock
+    /// attention; overridable for tests. Assigned in `init` so it can read the
+    /// per-timer sound at fire time.
     var onTargetReached: () -> Void = { TargetAlarm.shared.fire() }
 
     init(id: UUID = UUID(), title: String = "", targetDuration: TimeInterval? = nil) {
@@ -80,6 +87,10 @@ final class TimerModel: ObservableObject, Identifiable {
         self.title = title
         if let d = targetDuration {
             setTarget(d)
+        }
+        // Default ring uses THIS timer's selected sound, resolved at fire time.
+        onTargetReached = { [weak self] in
+            TargetAlarm.shared.fire(soundName: self?.alarmSoundName)
         }
         // [weak self] so the notification center's retained block never keeps
         // this model alive (no Timer/closure → self retain cycle); removed in

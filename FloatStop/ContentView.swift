@@ -106,7 +106,8 @@ struct ContentView: View {
                     case .target:
                         TargetEditorView(
                             currentTarget: engine.targetDuration,
-                            onApply: { engine.setTarget($0) }
+                            onApply: { engine.setTarget($0) },
+                            alarmSoundName: $engine.alarmSoundName
                         )
                     case .appearance:
                         AppearanceEditorView(engine: engine)

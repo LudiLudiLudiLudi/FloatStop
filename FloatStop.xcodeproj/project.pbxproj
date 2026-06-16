@@ -12,6 +12,7 @@
 		C00000000000000000000003 /* FloatingPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000003 /* FloatingPanel.swift */; };
 		C00000000000000000000004 /* TimerModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000004 /* TimerModel.swift */; };
 		C00000000000000000000020 /* DebugMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000020 /* DebugMetrics.swift */; };
+		C00000000000000000000023 /* SystemSounds.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000023 /* SystemSounds.swift */; };
 		C00000000000000000000021 /* TargetAlarm.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000021 /* TargetAlarm.swift */; };
 		C00000000000000000000022 /* AlarmSelfTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000022 /* AlarmSelfTest.swift */; };
 		C00000000000000000000005 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000005 /* ContentView.swift */; };
@@ -30,6 +31,7 @@
 		B00000000000000000000003 /* FloatingPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatingPanel.swift; sourceTree = "<group>"; };
 		B00000000000000000000004 /* TimerModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerModel.swift; sourceTree = "<group>"; };
 		B00000000000000000000020 /* DebugMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugMetrics.swift; sourceTree = "<group>"; };
+		B00000000000000000000023 /* SystemSounds.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemSounds.swift; sourceTree = "<group>"; };
 		B00000000000000000000021 /* TargetAlarm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TargetAlarm.swift; sourceTree = "<group>"; };
 		B00000000000000000000022 /* AlarmSelfTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmSelfTest.swift; sourceTree = "<group>"; };
 		B00000000000000000000005 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -76,6 +78,7 @@
 				B00000000000000000000003 /* FloatingPanel.swift */,
 				B00000000000000000000004 /* TimerModel.swift */,
 				B00000000000000000000020 /* DebugMetrics.swift */,
+				B00000000000000000000023 /* SystemSounds.swift */,
 				B00000000000000000000021 /* TargetAlarm.swift */,
 				B00000000000000000000022 /* AlarmSelfTest.swift */,
 				B00000000000000000000005 /* ContentView.swift */,
@@ -163,6 +166,7 @@
 				C00000000000000000000003 /* FloatingPanel.swift in Sources */,
 				C00000000000000000000004 /* TimerModel.swift in Sources */,
 				C00000000000000000000020 /* DebugMetrics.swift in Sources */,
+				C00000000000000000000023 /* SystemSounds.swift in Sources */,
 				C00000000000000000000021 /* TargetAlarm.swift in Sources */,
 				C00000000000000000000022 /* AlarmSelfTest.swift in Sources */,
 				C00000000000000000000005 /* ContentView.swift in Sources */,

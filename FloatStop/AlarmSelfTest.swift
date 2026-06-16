@@ -35,8 +35,8 @@ enum AlarmSelfTest {
         // that the 2nd play() on a shared NSSound was refused (only 1 audible).
         var realPlays = 0
         let realRing = TargetAlarm.shared.ringAction
-        TargetAlarm.shared.ringAction = {
-            let ok = realRing()
+        TargetAlarm.shared.ringAction = { name in
+            let ok = realRing(name)
             if ok { realPlays += 1 }
             return ok
         }
@@ -48,11 +48,41 @@ enum AlarmSelfTest {
         // T0 — TargetAlarm invokes the ring action at least twice for one
         // fire() (audio-independent: a pure counter that always "succeeds").
         var rings = 0
-        TargetAlarm.shared.ringAction = { rings += 1; return true }
+        TargetAlarm.shared.ringAction = { _ in rings += 1; return true }
         TargetAlarm.shared.fire(times: 2)
         pump(1.5)
         let t0Done = rings >= 2
         report("T0 ring invoked >= 2 (rings=\(rings))", t0Done)
+
+        // R3 — fire(soundName:) routes the SELECTED sound to every ring and the
+        // real sound plays (>=2 successful). Wrap the default real ring to
+        // record the requested names while still hitting NSSound for "Funk".
+        var r3Names: [String?] = []
+        var r3Plays = 0
+        let r3Default = TargetAlarm.shared.defaultRingAction
+        TargetAlarm.shared.ringAction = { name in
+            r3Names.append(name)
+            let ok = r3Default(name)
+            if ok { r3Plays += 1 }
+            return ok
+        }
+        TargetAlarm.shared.fire(times: 2, soundName: "Funk")
+        pump(2.0)
+        let r3 = r3Plays >= 2 && !r3Names.isEmpty && r3Names.allSatisfy { $0 == "Funk" }
+        report("R3 selected sound routed + played (names=\(r3Names.compactMap { $0 }), plays=\(r3Plays))", r3)
+
+        // R4 — an unknown/stale sound name still rings via the fallback chain.
+        var r4Plays = 0
+        let r4Default = TargetAlarm.shared.defaultRingAction
+        TargetAlarm.shared.ringAction = { name in
+            let ok = r4Default(name)
+            if ok { r4Plays += 1 }
+            return ok
+        }
+        TargetAlarm.shared.fire(times: 2, soundName: "NoSuchSound_zzz")
+        pump(2.0)
+        let r4 = r4Plays >= 2
+        report("R4 unknown sound falls back and still rings (plays=\(r4Plays))", r4)
 
         // TimerModel reached-event semantics (separate from the audible ring).
         var reached = 0
@@ -115,7 +145,7 @@ enum AlarmSelfTest {
         let s5 = reached == 3                      // no surprise fire from the past target
         report("S5 past target does not auto-fire (reached=\(reached))", s5)
 
-        let all = r0 && t0Done && s1 && s2 && s3 && s3b && s4 && s4b && s5
+        let all = r0 && t0Done && r3 && r4 && s1 && s2 && s3 && s3b && s4 && s4b && s5
         print("[AlarmSelfTest] RESULT: \(all ? "ALL PASS" : "FAILURES PRESENT")")
         exit(all ? 0 : 1)
     }
