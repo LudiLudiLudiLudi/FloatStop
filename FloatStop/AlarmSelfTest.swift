@@ -28,10 +28,31 @@ enum AlarmSelfTest {
         }
         print("[AlarmSelfTest] start")
 
-        // T0 — TargetAlarm rings at least twice for one fire().
-        var rings = 0
-        TargetAlarm.shared.ringAction = { rings += 1 }
+        // R0 — exercise the REAL ring chain end to end: TargetAlarm.fire →
+        // NSSound.play(). We wrap (not replace) the default ring so the real
+        // system sound is played AND we can count how many plays SUCCEEDED.
+        // Asserts two rings actually return play() == true — the earlier bug was
+        // that the 2nd play() on a shared NSSound was refused (only 1 audible).
+        var realPlays = 0
+        let realRing = TargetAlarm.shared.ringAction
+        TargetAlarm.shared.ringAction = {
+            let ok = realRing()
+            if ok { realPlays += 1 }
+            return ok
+        }
         TargetAlarm.shared.fire(times: 2)
+        pump(2.0)
+        let r0 = realPlays >= 2
+        report("R0 two real rings played (play()==true) (realPlays=\(realPlays))", r0)
+
+        // T0 — TargetAlarm invokes the ring action at least twice for one
+        // fire() (audio-independent: a pure counter that always "succeeds").
+        var rings = 0
+        TargetAlarm.shared.ringAction = { rings += 1; return true }
+        TargetAlarm.shared.fire(times: 2)
+        pump(1.5)
+        let t0Done = rings >= 2
+        report("T0 ring invoked >= 2 (rings=\(rings))", t0Done)
 
         // TimerModel reached-event semantics (separate from the audible ring).
         var reached = 0
@@ -39,11 +60,9 @@ enum AlarmSelfTest {
         model.onTargetReached = { reached += 1; print("[AlarmSelfTest] reached (#\(reached))") }
         model.startPause()        // arms the target 0.5 s out
 
-        // Req 2 + 7a: reaching target rings (>=2) and fires the event once.
+        // Req 7a: reaching the target fires the reached event exactly once.
         pump(1.2)
-        let t0 = rings >= 2
         let s1 = reached == 1
-        report("T0 plays >= 2 (rings=\(rings))", t0)
         report("S1 reaching target fires once (reached=\(reached))", s1)
 
         // Req 4 + 7b: staying past the target does NOT replay (single-fire guard).
@@ -96,7 +115,7 @@ enum AlarmSelfTest {
         let s5 = reached == 3                      // no surprise fire from the past target
         report("S5 past target does not auto-fire (reached=\(reached))", s5)
 
-        let all = t0 && s1 && s2 && s3 && s3b && s4 && s4b && s5
+        let all = r0 && t0Done && s1 && s2 && s3 && s3b && s4 && s4b && s5
         print("[AlarmSelfTest] RESULT: \(all ? "ALL PASS" : "FAILURES PRESENT")")
         exit(all ? 0 : 1)
     }
