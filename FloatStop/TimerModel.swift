@@ -66,6 +66,11 @@ final class TimerModel: ObservableObject, Identifiable {
     private var alarmTimer: Timer?
     private var targetAlarmFired = false
 
+    /// Token for the system-wake observer. A one-shot `Timer` does not fire
+    /// while the machine is asleep; if the target elapsed during sleep we ring
+    /// once on wake instead (see `handleSystemWake`).
+    private var wakeObserver: NSObjectProtocol?
+
     /// Invoked once when the task-window target is reached. Default rings the
     /// alarm (at least twice) + Dock attention; overridable for tests.
     var onTargetReached: () -> Void = { TargetAlarm.shared.fire() }
@@ -75,6 +80,16 @@ final class TimerModel: ObservableObject, Identifiable {
         self.title = title
         if let d = targetDuration {
             setTarget(d)
+        }
+        // [weak self] so the notification center's retained block never keeps
+        // this model alive (no Timer/closure → self retain cycle); removed in
+        // prepareForRemoval / deinit. queue: nil → delivered synchronously.
+        wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didWakeNotification,
+            object: nil,
+            queue: nil
+        ) { [weak self] _ in
+            self?.handleSystemWake()
         }
     }
 
@@ -201,6 +216,19 @@ final class TimerModel: ObservableObject, Identifiable {
         onTargetReached()
     }
 
+    /// On system wake, the one-shot alarm `Timer` may not have fired while the
+    /// machine was asleep. If the armed target has already elapsed and we have
+    /// not rung yet, ring exactly once now. The `targetAlarmFired` guard means a
+    /// late catch-up fire from the original `Timer` cannot double-ring, so the
+    /// alarm is delivered once — never retroactively several times — and no
+    /// window needs to be reopened. A still-future target is left to its Timer.
+    private func handleSystemWake() {
+        guard let end = targetEndDate, !targetAlarmFired else { return }
+        if end.timeIntervalSinceNow <= 0 {
+            fireTargetAlarm()
+        }
+    }
+
     private func pause() {
         if let start = startDate {
             accumulated += Date().timeIntervalSince(start)
@@ -221,6 +249,10 @@ final class TimerModel: ObservableObject, Identifiable {
         timer = nil
         alarmTimer?.invalidate()
         alarmTimer = nil
+        if let obs = wakeObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(obs)
+            wakeObserver = nil
+        }
         startDate = nil
         isRunning = false
     }
@@ -237,5 +269,8 @@ final class TimerModel: ObservableObject, Identifiable {
     deinit {
         timer?.invalidate()
         alarmTimer?.invalidate()
+        if let obs = wakeObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(obs)
+        }
     }
 }

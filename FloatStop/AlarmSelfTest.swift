@@ -9,13 +9,14 @@ import AppKit
 ///   FLOATSTOP_SELFTEST_ALARM=1 /path/to/FloatStop
 ///
 /// Timing note: the test drives time by explicitly *pumping* the run loop
-/// (`pump`) rather than chaining `DispatchQueue.asyncAfter`. A bare binary with
-/// no window settles into a state where the idle run loop stops servicing
-/// `Timer`s (only libdispatch keeps waking the main thread), which would
-/// non-deterministically swallow a re-armed alarm in the harness even though
-/// the real app — which always has a window and live event loop — fires it.
-/// Pumping keeps the run loop in a timer-servicing mode for the whole test, so
-/// the alarm's own `Timer` is delivered exactly as it is in production.
+/// (`pump`) rather than chaining `DispatchQueue.asyncAfter`. Current evidence
+/// suggests a bare binary with no window can settle into a state where the idle
+/// run loop stops servicing `Timer`s (only libdispatch keeps waking the main
+/// thread); that appeared to non-deterministically swallow a re-armed alarm in
+/// the harness. This points to the self-test runtime environment rather than
+/// product logic — the real app always has a window and a live event loop.
+/// After switching the harness to deterministic run-loop pumping, all scenarios
+/// passed, so the alarm's own `Timer` is exercised as it is in production.
 enum AlarmSelfTest {
     /// Returns false if the self-test was not requested (normal launch). When it
     /// IS requested the test runs synchronously and terminates the process, so
@@ -65,7 +66,37 @@ enum AlarmSelfTest {
         let s3b = reached == 2
         report("S3b stable, no duplicates (reached=\(reached))", s3b)
 
-        let all = t0 && s1 && s2 && s3 && s3b
+        // Edge: arm target, the machine "sleeps" (run loop is not pumped, the
+        // analog of system sleep — the one-shot Timer cannot fire), the target
+        // elapses during sleep, then the machine wakes. Requirement: ring once
+        // on wake, not retroactively several times, without reopening a window.
+        model.reset()
+        model.setTarget(0.3)
+        model.startPause()                       // armed 0.3s out
+        Thread.sleep(forTimeInterval: 0.6)       // "asleep": run loop NOT pumped → no fire
+        NSWorkspace.shared.notificationCenter.post(
+            name: NSWorkspace.didWakeNotification, object: nil
+        )                                        // wake → synchronous handler
+        let s4 = reached == 3                     // exactly one fire, delivered on wake
+        report("S4 target passed during sleep rings once on wake (reached=\(reached))", s4)
+        pump(0.6)                                 // overdue catch-up Timer also runs now
+        let s4b = reached == 3                    // still 3 — guard blocks the double-ring
+        report("S4b no retroactive multi-fire after wake (reached=\(reached))", s4b)
+
+        // Edge: a target that is set/restored ALREADY in the past must NOT
+        // auto-fire (guards against a surprise "past alarm" — e.g. a future
+        // relaunch that restores an expired target). FloatStop does not persist
+        // timers across launches today, so this locks the guard regardless.
+        model.reset()
+        model.setTarget(5.0)
+        model.startPause()                       // targetStartedAt = now, end = now+5s
+        Thread.sleep(forTimeInterval: 0.3)
+        model.setTarget(0.1)                     // end = start(0.3s ago)+0.1 → ~0.2s in the PAST
+        pump(0.5)
+        let s5 = reached == 3                      // no surprise fire from the past target
+        report("S5 past target does not auto-fire (reached=\(reached))", s5)
+
+        let all = t0 && s1 && s2 && s3 && s3b && s4 && s4b && s5
         print("[AlarmSelfTest] RESULT: \(all ? "ALL PASS" : "FAILURES PRESENT")")
         exit(all ? 0 : 1)
     }
