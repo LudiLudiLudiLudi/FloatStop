@@ -17,19 +17,6 @@ final class TimerWindowController: NSObject, NSWindowDelegate {
 
     private var cancellables: Set<AnyCancellable> = []
 
-    /// Snooze re-show timer. Armed when an ALERTING timer is hidden: the hide
-    /// is honored immediately but does not acknowledge, and after `snoozeInterval`
-    /// the still-unacknowledged alert resurfaces (and replays the sound).
-    private var snoozeTimer: Timer?
-    /// Default 60 s; overridable via FLOATSTOP_SNOOZE_SECONDS for quick testing.
-    private let snoozeInterval: TimeInterval = {
-        if let s = ProcessInfo.processInfo.environment["FLOATSTOP_SNOOZE_SECONDS"],
-           let v = Double(s), v > 0 {
-            return v
-        }
-        return 60
-    }()
-
     init(model: TimerModel = TimerModel(),
          contentRect: NSRect = NSRect(x: 0, y: 0, width: 280, height: 160),
          centered: Bool = true) {
@@ -42,7 +29,7 @@ final class TimerWindowController: NSObject, NSWindowDelegate {
         )
         super.init()
 
-        let hosting = NSHostingView(rootView: ContentView(
+        let hosting = FirstMouseHostingView(rootView: ContentView(
             engine: model,
             onDuplicate: { [weak self] in self?.onDuplicate?() },
             onHide: { [weak self] in self?.hide() },
@@ -75,18 +62,12 @@ final class TimerWindowController: NSObject, NSWindowDelegate {
 
         // Surface the window when its alert turns on while it is hidden (the
         // user hid it BEFORE the target). The sound was already rung by the
-        // model, so we only bring the window forward + start blinking. When the
-        // alert is acknowledged, cancel any pending snooze re-show.
+        // model, so we only bring the window forward + start blinking. This is
+        // a FIRST show, not a re-show: the user can dismiss it with any control.
         model.$isAlerting
             .sink { [weak self] alerting in
-                guard let self else { return }
-                if alerting {
-                    if !self.panel.isVisible {
-                        self.surfaceForAlert(replaySound: false)
-                    }
-                } else {
-                    self.cancelSnooze()
-                }
+                guard let self, alerting, !self.panel.isVisible else { return }
+                self.surfaceForAlert()
             }
             .store(in: &cancellables)
     }
@@ -103,54 +84,37 @@ final class TimerWindowController: NSObject, NSWindowDelegate {
         return false
     }
 
-    /// Non-destructive hide: order the window out. The timer keeps running and
-    /// the controller stays in the store, so "Show All Timers" brings it back.
-    /// Hiding an ACTIVELY ALERTING timer does NOT acknowledge the alert — it
-    /// snoozes: the window leaves now (blinking stops because nothing renders),
-    /// and after `snoozeInterval` the still-unacknowledged alert resurfaces.
+    /// Hide ALWAYS succeeds immediately, and it WINS over the alert: if the
+    /// timer is alerting, Hide acknowledges it (synchronously, idempotently) so
+    /// the window never resurfaces on its own — the user can always make it go
+    /// away. The timer keeps running and the controller stays in the store, so
+    /// "Show All Timers" can still bring it back manually.
     func hide() {
+        model.acknowledgeAlert()   // dismiss the alert first → controls win
         panel.orderOut(nil)
-        if model.isAlerting {
-            startSnooze()
-        }
     }
 
     /// Bring the window visually forward for an alert WITHOUT stealing keyboard
     /// focus (orderFrontRegardless, not makeKey) and resume its display refresh.
-    /// The panel sits at `.floating` level, so it lands above normal windows.
-    private func surfaceForAlert(replaySound: Bool) {
+    /// Guarded by `isAlerting`: once the alert has been dismissed this is a
+    /// no-op, so a dismissal can never be undone by a late surface.
+    private func surfaceForAlert() {
+        guard model.isAlerting else { return }
         model.setDisplayPaused(false)
         panel.orderFrontRegardless()
-        if replaySound {
-            TargetAlarm.shared.fire(soundName: model.alarmSoundName)
-        }
     }
 
-    private func startSnooze() {
-        cancelSnooze()
-        let t = Timer(timeInterval: snoozeInterval, repeats: false) { [weak self] _ in
-            self?.snoozeFired()
-        }
-        t.tolerance = 1.0
-        RunLoop.main.add(t, forMode: .common)
-        snoozeTimer = t
-    }
-
-    private func snoozeFired() {
-        snoozeTimer = nil
-        // If the user acknowledged during the snooze, stay dismissed.
-        guard model.isAlerting else { return }
-        surfaceForAlert(replaySound: true)
-    }
-
-    private func cancelSnooze() {
-        snoozeTimer?.invalidate()
-        snoozeTimer = nil
-    }
-
-    /// Confirm, then permanently close this timer (stop it + remove it from
-    /// the store via `onClose`). Cancel leaves it running and visible.
+    /// Close ALWAYS succeeds immediately. While the timer is alerting the
+    /// control must win, so we skip the destructive-confirmation modal (a modal
+    /// run loop opened from an inactive / non-key surfaced window can trap the
+    /// app) and close at once, acknowledging the alert synchronously first.
+    /// When NOT alerting, keep the normal confirmation.
     func confirmAndClose() {
+        if model.isAlerting {
+            model.acknowledgeAlert()
+            onClose?()
+            return
+        }
         let alert = NSAlert()
         alert.messageText = "Close Timer?"
         alert.informativeText = "This will stop and remove this timer."
@@ -163,15 +127,20 @@ final class TimerWindowController: NSObject, NSWindowDelegate {
         }
     }
 
-    /// Manual restore (e.g. "Show All Timers"). Cancels any pending snooze so an
-    /// alert the user has already brought back doesn't fire a duplicate re-show.
+    /// Manual restore (e.g. "Show All Timers").
     func showWindow() {
-        cancelSnooze()
         panel.makeKeyAndOrderFront(nil as Any?)
     }
 
     deinit {
         NotificationCenter.default.removeObserver(self)
-        snoozeTimer?.invalidate()
     }
+}
+
+/// Hosting view that accepts the first mouse click even when its window is not
+/// key. Guarantees the timer's in-window controls (Hide / ⊖ / Reset) respond on
+/// the FIRST click after the window auto-surfaces for an alert — when the app
+/// may be inactive and the panel non-key — so window controls always win.
+private final class FirstMouseHostingView<Content: View>: NSHostingView<Content> {
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 }

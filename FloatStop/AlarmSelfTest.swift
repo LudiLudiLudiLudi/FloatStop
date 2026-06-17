@@ -194,8 +194,17 @@ enum AlarmSelfTest {
         let b7 = mA.isAlerting == true && mB.isAlerting == false
         report("B7 two timers alert independently (A=\(mA.isAlerting) B=\(mB.isAlerting))", b7)
 
+        // B8: explicit dismissal (the Hide path) clears the alert SYNCHRONOUSLY
+        // and it stays clear — no async re-set can revive it. This is the model
+        // half of "controls always win / alert never traps the window".
+        mA.acknowledgeAlert()
+        let b8now = mA.isAlerting == false      // cleared on the same line, no await
+        pump(0.6)
+        let b8 = b8now && mA.isAlerting == false
+        report("B8 dismissal clears synchronously and stays clear (now=\(b8now) after=\(mA.isAlerting))", b8)
+
         let all = r0 && t0Done && r3 && r4 && s1 && s2 && s3 && s3b && s4 && s4b && s5
-            && b1 && b2 && b3 && b4 && b5 && b6 && b7
+            && b1 && b2 && b3 && b4 && b5 && b6 && b7 && b8
         print("[AlarmSelfTest] RESULT: \(all ? "ALL PASS" : "FAILURES PRESENT")")
         exit(all ? 0 : 1)
     }

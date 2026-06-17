@@ -143,6 +143,14 @@ final class TimerModel: ObservableObject, Identifiable {
         }
     }
 
+    /// Synchronous, idempotent alert dismissal. Window controls (Hide / Close)
+    /// call this so the alert can NEVER trap the window — the control always
+    /// wins over alert behavior. Clearing `isAlerting` here also makes the
+    /// controller's `surfaceForAlert` a no-op and stops the blinking at once.
+    func acknowledgeAlert() {
+        isAlerting = false
+    }
+
     /// Reset clears task content only. Per-window appearance (color, opacity,
     /// titleFontSize, digitFontSize) is preserved — it's window style, not
     /// task state.
