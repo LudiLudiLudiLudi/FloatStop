@@ -145,7 +145,57 @@ enum AlarmSelfTest {
         let s5 = reached == 3                      // no surprise fire from the past target
         report("S5 past target does not auto-fire (reached=\(reached))", s5)
 
+        // ===== Persistent alert state machine (isAlerting) =====
+        // B1: reaching the target raises the persistent alert flag.
+        let m = TimerModel(title: "alert", targetDuration: 0.4)
+        m.onTargetReached = {}                      // silence the sound for the test
+        m.startPause()
+        pump(0.9)
+        let b1 = m.isAlerting == true
+        report("B1 target reached raises isAlerting (\(m.isAlerting))", b1)
+
+        // B2: the alert persists well after the (one-shot) sound would have ended.
+        pump(1.5)
+        let b2 = m.isAlerting == true
+        report("B2 alert persists after sound ends (\(m.isAlerting))", b2)
+
+        // B3: Reset acknowledges.
+        m.reset()
+        let b3 = m.isAlerting == false
+        report("B3 Reset clears alert (\(m.isAlerting))", b3)
+
+        // B4: Pause keeps the alert; Start (a new run) acknowledges.
+        m.setTarget(0.4); m.startPause(); pump(0.9)
+        let b4pre = m.isAlerting                    // alerting, running (overtime)
+        m.startPause()                              // → Pause (NOT an acknowledgment)
+        let b4paused = m.isAlerting
+        m.startPause()                              // → Start a new run (acknowledges)
+        let b4 = b4pre && b4paused && m.isAlerting == false
+        report("B4 Pause keeps / Start clears (pre=\(b4pre) paused=\(b4paused) afterStart=\(m.isAlerting))", b4)
+
+        // B5: Set new target acknowledges.
+        m.reset(); m.setTarget(0.4); m.startPause(); pump(0.9)
+        let b5pre = m.isAlerting
+        m.setTarget(60)
+        let b5 = b5pre && m.isAlerting == false
+        report("B5 Set new target clears alert (pre=\(b5pre) after=\(m.isAlerting))", b5)
+
+        // B6: Close (prepareForRemoval) acknowledges.
+        m.reset(); m.setTarget(0.4); m.startPause(); pump(0.9)
+        let b6pre = m.isAlerting
+        m.prepareForRemoval()
+        let b6 = b6pre && m.isAlerting == false
+        report("B6 Close clears alert (pre=\(b6pre) after=\(m.isAlerting))", b6)
+
+        // B7: two timers alert independently (per-window state).
+        let mA = TimerModel(title: "A", targetDuration: 0.4); mA.onTargetReached = {}
+        let mB = TimerModel(title: "B", targetDuration: 60);  mB.onTargetReached = {}
+        mA.startPause(); mB.startPause(); pump(0.9)
+        let b7 = mA.isAlerting == true && mB.isAlerting == false
+        report("B7 two timers alert independently (A=\(mA.isAlerting) B=\(mB.isAlerting))", b7)
+
         let all = r0 && t0Done && r3 && r4 && s1 && s2 && s3 && s3b && s4 && s4b && s5
+            && b1 && b2 && b3 && b4 && b5 && b6 && b7
         print("[AlarmSelfTest] RESULT: \(all ? "ALL PASS" : "FAILURES PRESENT")")
         exit(all ? 0 : 1)
     }

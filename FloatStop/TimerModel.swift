@@ -71,6 +71,13 @@ final class TimerModel: ObservableObject, Identifiable {
     private var alarmTimer: Timer?
     private var targetAlarmFired = false
 
+    /// Persistent "target reached" alert flag (per-window). Set true when the
+    /// alarm fires; drives the blinking-digits visual alert and the window
+    /// surfacing/snooze in the controller. It stays true — independent of the
+    /// sound, which is one-shot — until the user ACKNOWLEDGES via Reset, Start
+    /// (new run), Set new target, or Close. Hide and Show All do NOT acknowledge.
+    @Published private(set) var isAlerting = false
+
     /// Token for the system-wake observer. A one-shot `Timer` does not fire
     /// while the machine is asleep; if the target elapsed during sleep we ring
     /// once on wake instead (see `handleSystemWake`).
@@ -112,6 +119,8 @@ final class TimerModel: ObservableObject, Identifiable {
     /// - duration set, window not started → `targetEndDate` remains nil; the
     ///   next Start arms the window.
     func setTarget(_ duration: TimeInterval?) {
+        // Setting (or clearing) the target is an acknowledgment of any active alert.
+        isAlerting = false
         guard let duration = duration else {
             targetDuration = nil
             targetStartedAt = nil
@@ -145,12 +154,15 @@ final class TimerModel: ObservableObject, Identifiable {
         elapsed = 0
         isRunning = false
         title = ""
+        isAlerting = false        // Reset acknowledges any active alert.
         targetDuration = nil
         targetStartedAt = nil
         targetEndDate = nil
     }
 
     private func resume() {
+        // Starting a (new) run acknowledges any active alert.
+        isAlerting = false
         startDate = Date()
         isRunning = true
         // First Start after a target was set arms the wall-clock task window.
@@ -224,6 +236,7 @@ final class TimerModel: ObservableObject, Identifiable {
         guard !targetAlarmFired else { return }
         targetAlarmFired = true
         alarmTimer = nil
+        isAlerting = true        // start the persistent visual alert (until acknowledged)
         onTargetReached()
     }
 
@@ -266,6 +279,7 @@ final class TimerModel: ObservableObject, Identifiable {
         }
         startDate = nil
         isRunning = false
+        isAlerting = false       // Closing acknowledges/clears any active alert.
     }
 
     private func tick() {

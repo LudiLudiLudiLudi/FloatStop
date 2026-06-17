@@ -27,13 +27,23 @@ struct ContentView: View {
                 .foregroundStyle(engine.titleColor.swiftUIColor)
                 .frame(maxWidth: .infinity)
 
-            Text(formatElapsed(engine.elapsed))
-                .font(.system(size: CGFloat(engine.digitFontSize), weight: .semibold, design: .monospaced))
-                .monospacedDigit()
-                .foregroundStyle(engine.digitColor.swiftUIColor)
-                .minimumScaleFactor(0.5)
-                .lineLimit(1)
-                .frame(maxWidth: .infinity)
+            // Timer digits. When the target alarm is active (`isAlerting`), the
+            // digits blink — a smooth ~2 Hz fade driven by a sine on the
+            // animation clock. Blinking is OPACITY ONLY, so the layout never
+            // resizes or shifts. The TimelineView(.animation) high-frequency
+            // refresh runs ONLY while alerting; the rest of the time the digits
+            // are static (preserving the 1 Hz idle-CPU behavior). The blink
+            // continues until the alert is acknowledged — it is not tied to the
+            // one-shot sound.
+            Group {
+                if engine.isAlerting {
+                    TimelineView(.animation) { context in
+                        digitsText.opacity(blinkOpacity(at: context.date))
+                    }
+                } else {
+                    digitsText
+                }
+            }
 
             // Allocated task window status. The TimelineView's 1 Hz refresh is
             // only paid for when a target exists. With no target, render a
@@ -77,6 +87,20 @@ struct ContentView: View {
                 .tint(.red)
                 .controlSize(.regular)
 
+                // Dedicated Hide: non-destructive, distinct from Close. The
+                // window leaves the screen but the timer keeps running and its
+                // state is preserved; "Show All Timers" brings it back.
+                if onHide != nil {
+                    Button {
+                        onHide?()
+                    } label: {
+                        Image(systemName: "eye.slash")
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.regular)
+                    .help("Hide only — the timer keeps running; restore it with Show All Timers")
+                }
+
                 Menu {
                     Button("Set Target…") { activePopover = .target }
                         .disabled(engine.isRunning)
@@ -92,9 +116,11 @@ struct ContentView: View {
                     }
                     if onHide != nil {
                         Button("Hide Timer") { onHide?() }   // reversible: Show All brings it back
+                            .help("Hide only — the timer keeps running")
                     }
                     if onRequestClose != nil {
                         Button("Close Timer", role: .destructive) { onRequestClose?() }  // confirms, then removes
+                            .help("Close — stop and remove this timer")
                     }
                 } label: {
                     Image(systemName: "ellipsis.circle")
@@ -118,6 +144,26 @@ struct ContentView: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
         .frame(minWidth: 220, minHeight: 130)
+    }
+
+    // MARK: - digits
+
+    private var digitsText: some View {
+        Text(formatElapsed(engine.elapsed))
+            .font(.system(size: CGFloat(engine.digitFontSize), weight: .semibold, design: .monospaced))
+            .monospacedDigit()
+            .foregroundStyle(engine.digitColor.swiftUIColor)
+            .minimumScaleFactor(0.5)
+            .lineLimit(1)
+            .frame(maxWidth: .infinity)
+    }
+
+    /// Smooth blink opacity: a 2 Hz sine (two full fade cycles per second)
+    /// ranging from a dim 0.15 to fully opaque 1.0.
+    private func blinkOpacity(at date: Date) -> Double {
+        let t = date.timeIntervalSinceReferenceDate
+        let phase = (sin(t * 2 * Double.pi * 2) + 1) / 2   // 0...1, 2 cycles/sec
+        return 0.15 + 0.85 * phase
     }
 
     // MARK: - secondary line
