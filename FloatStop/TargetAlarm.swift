@@ -7,9 +7,10 @@ import AppKit
 /// - `NSSound` plays regardless of whether the app/window is focused or in the
 ///   background — there is no "autoplay needs a user gesture" restriction like
 ///   in browsers, and no permission prompt for system sounds.
-/// - `requestUserAttention(.criticalRequest)` bounces the Dock icon / draws
-///   attention even when the app is unfocused; it needs no permission either,
-///   and is the visual fallback in case audio output is muted/unavailable.
+/// - `requestUserAttention(.informationalRequest)` bounces the Dock icon ONCE
+///   even when the app is unfocused; it needs no permission either, and is the
+///   visual fallback in case audio output is muted/unavailable. (Not
+///   `.criticalRequest`, which bounces endlessly until the app is activated.)
 ///
 /// Main-thread only — driven from `TimerModel`'s one-shot alarm timer on
 /// `RunLoop.main`.
@@ -43,12 +44,14 @@ final class TargetAlarm {
     /// Ring until at least `max(2, times)` rings have SUCCESSFULLY played (not
     /// merely been scheduled), each spaced by a short gap so they're distinct.
     /// `soundName` selects which system sound to ring (nil → default chain).
-    /// `requestUserAttention` is the no-permission visual fallback that works
-    /// while unfocused. A refused `play()` is retried, but the total attempt
-    /// count is bounded by `maxExtraAttempts`, so audio failure degrades to the
-    /// visual cue instead of an infinite loop.
+    /// `requestUserAttention(.informationalRequest)` is a no-permission visual
+    /// nudge that bounces the Dock icon ONCE (~1 s). We deliberately do NOT use
+    /// `.criticalRequest`, which bounces endlessly until the app is *activated*
+    /// — with our nonactivating panel that would keep bouncing even after the
+    /// user dismisses the alert from the window (controls must win, and the
+    /// surfaced + blinking window already makes the alert hard to miss).
     func fire(times: Int = 2, soundName: String? = nil) {
-        NSApp.requestUserAttention(.criticalRequest)
+        NSApp.requestUserAttention(.informationalRequest)
         let needed = max(2, times)
         scheduleRing(soundName: soundName, successesNeeded: needed,
                      attemptsLeft: needed + maxExtraAttempts, delay: 0)
