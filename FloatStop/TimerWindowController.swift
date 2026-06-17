@@ -17,6 +17,19 @@ final class TimerWindowController: NSObject, NSWindowDelegate {
 
     private var cancellables: Set<AnyCancellable> = []
 
+    /// Snooze re-show timer. Armed when an ALERTING timer is hidden: the hide
+    /// is honored immediately but does not acknowledge, and after `snoozeInterval`
+    /// the still-unacknowledged alert resurfaces (and replays the sound).
+    private var snoozeTimer: Timer?
+    /// Default 60 s; overridable via FLOATSTOP_SNOOZE_SECONDS for quick testing.
+    private let snoozeInterval: TimeInterval = {
+        if let s = ProcessInfo.processInfo.environment["FLOATSTOP_SNOOZE_SECONDS"],
+           let v = Double(s), v > 0 {
+            return v
+        }
+        return 60
+    }()
+
     init(model: TimerModel = TimerModel(),
          contentRect: NSRect = NSRect(x: 0, y: 0, width: 280, height: 160),
          centered: Bool = true) {
@@ -59,6 +72,23 @@ final class TimerWindowController: NSObject, NSWindowDelegate {
             name: NSWindow.didChangeOcclusionStateNotification,
             object: panel
         )
+
+        // Surface the window when its alert turns on while it is hidden (the
+        // user hid it BEFORE the target). The sound was already rung by the
+        // model, so we only bring the window forward + start blinking. When the
+        // alert is acknowledged, cancel any pending snooze re-show.
+        model.$isAlerting
+            .sink { [weak self] alerting in
+                guard let self else { return }
+                if alerting {
+                    if !self.panel.isVisible {
+                        self.surfaceForAlert(replaySound: false)
+                    }
+                } else {
+                    self.cancelSnooze()
+                }
+            }
+            .store(in: &cancellables)
     }
 
     @objc private func occlusionChanged() {
@@ -73,11 +103,49 @@ final class TimerWindowController: NSObject, NSWindowDelegate {
         return false
     }
 
-    /// Non-destructive hide: just order the window out. The timer keeps
-    /// running and the controller stays in the store, so "Show All Timers"
-    /// brings it back.
+    /// Non-destructive hide: order the window out. The timer keeps running and
+    /// the controller stays in the store, so "Show All Timers" brings it back.
+    /// Hiding an ACTIVELY ALERTING timer does NOT acknowledge the alert — it
+    /// snoozes: the window leaves now (blinking stops because nothing renders),
+    /// and after `snoozeInterval` the still-unacknowledged alert resurfaces.
     func hide() {
         panel.orderOut(nil)
+        if model.isAlerting {
+            startSnooze()
+        }
+    }
+
+    /// Bring the window visually forward for an alert WITHOUT stealing keyboard
+    /// focus (orderFrontRegardless, not makeKey) and resume its display refresh.
+    /// The panel sits at `.floating` level, so it lands above normal windows.
+    private func surfaceForAlert(replaySound: Bool) {
+        model.setDisplayPaused(false)
+        panel.orderFrontRegardless()
+        if replaySound {
+            TargetAlarm.shared.fire(soundName: model.alarmSoundName)
+        }
+    }
+
+    private func startSnooze() {
+        cancelSnooze()
+        let t = Timer(timeInterval: snoozeInterval, repeats: false) { [weak self] _ in
+            self?.snoozeFired()
+        }
+        t.tolerance = 1.0
+        RunLoop.main.add(t, forMode: .common)
+        snoozeTimer = t
+    }
+
+    private func snoozeFired() {
+        snoozeTimer = nil
+        // If the user acknowledged during the snooze, stay dismissed.
+        guard model.isAlerting else { return }
+        surfaceForAlert(replaySound: true)
+    }
+
+    private func cancelSnooze() {
+        snoozeTimer?.invalidate()
+        snoozeTimer = nil
     }
 
     /// Confirm, then permanently close this timer (stop it + remove it from
@@ -95,11 +163,15 @@ final class TimerWindowController: NSObject, NSWindowDelegate {
         }
     }
 
+    /// Manual restore (e.g. "Show All Timers"). Cancels any pending snooze so an
+    /// alert the user has already brought back doesn't fire a duplicate re-show.
     func showWindow() {
+        cancelSnooze()
         panel.makeKeyAndOrderFront(nil as Any?)
     }
 
     deinit {
         NotificationCenter.default.removeObserver(self)
+        snoozeTimer?.invalidate()
     }
 }
