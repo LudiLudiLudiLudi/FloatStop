@@ -1,16 +1,12 @@
 import AppKit
 
-/// Plays the "target reached" alarm — at least twice, audibly — and nudges the
-/// Dock as a no-permission visual fallback.
+/// Plays the "target reached" alarm — at least twice, audibly.
 ///
-/// Native-macOS notes (vs the browser limitations the request mentions):
-/// - `NSSound` plays regardless of whether the app/window is focused or in the
-///   background — there is no "autoplay needs a user gesture" restriction like
-///   in browsers, and no permission prompt for system sounds.
-/// - `requestUserAttention(.informationalRequest)` bounces the Dock icon ONCE
-///   even when the app is unfocused; it needs no permission either, and is the
-///   visual fallback in case audio output is muted/unavailable. (Not
-///   `.criticalRequest`, which bounces endlessly until the app is activated.)
+/// Native-macOS note: `NSSound` plays regardless of whether the app/window is
+/// focused or in the background — there is no "autoplay needs a user gesture"
+/// restriction like in browsers, and no permission prompt for system sounds.
+/// There is NO Dock-icon attention request: the visual alert is the
+/// auto-surfaced + blinking timer window (see TimerWindowController / ContentView).
 ///
 /// Main-thread only — driven from `TimerModel`'s one-shot alarm timer on
 /// `RunLoop.main`.
@@ -44,14 +40,11 @@ final class TargetAlarm {
     /// Ring until at least `max(2, times)` rings have SUCCESSFULLY played (not
     /// merely been scheduled), each spaced by a short gap so they're distinct.
     /// `soundName` selects which system sound to ring (nil → default chain).
-    /// `requestUserAttention(.informationalRequest)` is a no-permission visual
-    /// nudge that bounces the Dock icon ONCE (~1 s). We deliberately do NOT use
-    /// `.criticalRequest`, which bounces endlessly until the app is *activated*
-    /// — with our nonactivating panel that would keep bouncing even after the
-    /// user dismisses the alert from the window (controls must win, and the
-    /// surfaced + blinking window already makes the alert hard to miss).
+    /// No Dock-icon attention request: the visual signal is the auto-surfaced +
+    /// blinking timer window, and the audible signal is the sound. (Dock bounce
+    /// was removed by request — `.criticalRequest` bounced endlessly until the
+    /// app was activated, and even `.informationalRequest` was unwanted.)
     func fire(times: Int = 2, soundName: String? = nil) {
-        NSApp.requestUserAttention(.informationalRequest)
         let needed = max(2, times)
         scheduleRing(soundName: soundName, successesNeeded: needed,
                      attemptsLeft: needed + maxExtraAttempts, delay: 0)
